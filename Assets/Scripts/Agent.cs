@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEditor;
+using System;
 
 public class Agent : MonoBehaviour
 {
@@ -10,8 +12,8 @@ public class Agent : MonoBehaviour
 
     string matrixDebug;
 
-    int[,] Rmatrix = new int[5,7];
-    int[,] Qmatrix = new int[5, 7];
+    int[,] Rmatrix = new int[7,5];
+    int[,] Qmatrix = new int[7,5];
 
     int[,] moves = {
          {0, -1},   // North
@@ -23,40 +25,38 @@ public class Agent : MonoBehaviour
 
     public List<Vector2> actions = new List<Vector2>();
 
+    public List<R> Rewards = new List<R>();
+    public int Qvalues;
+    public float gamma = 0.8f;
+
     void Start()
     {
         world = GameObject.Find("Global_Scripts").GetComponent<WorldGen>();
-        //Debug.Log(world.position[new Vector2(0,0)].transform.position);
-        for (int i = 0; i < world.height; i++)
+        
+        for (int i = 0; i < world.width; i++)
         {
-            for (int j = 0; j < world.width; j++)
+            for (int j = 0; j < world.height; j++)
             {
                 Rmatrix[i, j] = 0;
-            }
-        }
-
-        Rmatrix[4, 1] = -10;
-        Rmatrix[4, 2] = -10;
-        Rmatrix[4, 3] = -10;
-        Rmatrix[4, 4] = -10;
-        Rmatrix[4, 5] = -10;
-        Rmatrix[4, 6] = 100;
-
-        for (int i = 0; i < world.height; i++)
-        {
-            for (int j = 0; j < world.width; j++)
-            {
                 Qmatrix[i, j] = 0;
             }
         }
 
-        DebugMatrix(Qmatrix);
-        position = new Vector2(2,2);
+        Rmatrix[1, 4] = -10;
+        Rmatrix[2, 4] = -10;
+        Rmatrix[3, 4] = -10;
+        Rmatrix[4, 4] = -10;
+        Rmatrix[5, 4] = -10;
+        Rmatrix[6, 4] = 100;
+
+        
+        position = new Vector2(0,4);
+
         
 
         GetLegalMoves(position);
 
-        float stepTime = 1.0f;
+        float stepTime = 0.3f;
         float delay = 0.0f;
 
         InvokeRepeating("TestMove", delay , stepTime);
@@ -66,32 +66,32 @@ public class Agent : MonoBehaviour
     void GetLegalMoves(Vector2 currentPos)
     {
         actions.Clear();
-        Debug.Log(currentPos.ToString());
-        for (int i = 0; i < world.width; i++)
+        //Debug.Log(currentPos.ToString());
+        for (int i = 0; i < 7; i++)
         {
-            for (int j = 0; j < world.height; j++)
+            for (int j = 0; j < 5; j++)
             {
-                if ((int)currentPos.x == i && (int)currentPos.y == j)
+                if (Mathf.Ceil(currentPos.x) == i && (Mathf.Ceil(currentPos.y) == j)) ;
                 {
                     // if currentpos[0] + moves[0][0] <= rows-1 and currentpos[0] + moves[0][0] >= 0 and currentpos[1] + moves[0][1] <= columns-1 and currentpos[1] + moves[0][1] >= 0:
                     if(currentPos.x + moves[0, 0] < world.width && currentPos.x + moves[0, 0] >= 0 && currentPos.y + moves[0, 1] < world.height && currentPos.y + moves[0, 1] >= 0)
                     {
-                        Debug.Log("North");
+                        //Debug.Log("North");
                         actions.Add(new Vector2(moves[0,0] , moves[0,1]));
                     }
                     if(currentPos.x + moves[1, 0] < world.width && currentPos.x + moves[1, 0] >= 0 && currentPos.y + moves[1, 1] < world.height && currentPos.y + moves[1, 1] >= 0)
                     {
-                        Debug.Log("East");
+                        //Debug.Log("East");// + new Vector2(currentPos.x + moves[1, 0] , currentPos.y + moves[1, 1]) );
                         actions.Add(new Vector2(moves[1, 0], moves[1, 1]));
                     }
                     if(currentPos.x + moves[2, 0] < world.width && currentPos.x + moves[2, 0] >= 0 && currentPos.y + moves[2, 1] < world.height && currentPos.y + moves[2, 1] >= 0)
                     {
-                        Debug.Log("South");
+                        //Debug.Log("South");
                         actions.Add(new Vector2(moves[2, 0], moves[2, 1]));
                     }
                     if(currentPos.x + moves[3, 0] < world.width && currentPos.x + moves[3, 0] >= 0 && currentPos.y + moves[3, 1] < world.height && currentPos.y + moves[3, 1] >= 0)
                     {
-                        Debug.Log("West");
+                        //Debug.Log("West");
                         actions.Add(new Vector2(moves[3, 0], moves[3, 1]));
                     }
 
@@ -102,18 +102,69 @@ public class Agent : MonoBehaviour
 
     void GetRandomAction()
     {
-        Vector2 temp = actions[Random.Range(0, actions.Count)];
-        position += temp;
+        try
+        {
+            Vector2 temp = actions[UnityEngine.Random.Range(0, actions.Count)];
+            position += temp;
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e);
+            Debug.Log("East" + new Vector2(position.x + moves[1, 0] , position.y + moves[1, 1]) );
+            throw;
+            
+        }
+        
+    }
+
+    R getMaxACtion()
+    {
+        //var temp = Rewards.Select(a => a.reward).Max(a => a);
+
+        R maxItem = Rewards[0];
+        foreach (var a in Rewards)
+        {
+            if (a.reward > maxItem.reward)
+            {
+                maxItem = a;
+            }
+        }
+
+        //Debug.Log("Max action: " + temp);
+        return maxItem;
     }
 
     void QLearning()
     {
+        Rewards.Clear();
         // state = square currently in.
         // action = moves possible.
 
         // need to get max reward action
         // do action 
         // calc reward for last state.
+        Debug.Log(position.x + " , " + position.y);
+        Qvalues = (Qmatrix[Convert.ToInt32(position.x), Convert.ToInt32(position.y)]);
+        foreach (var a in actions)
+        {
+            Rewards.Add(new R(a, Rmatrix[Convert.ToInt32(position.x + a.x ), Convert.ToInt32(position.y + a.y)]));  
+        }
+        if (getMaxACtion().reward > 0)
+        {
+            Qvalues = Convert.ToInt32(getMaxACtion().reward + gamma * (Qmatrix[(int)getMaxACtion().action.x, (int)getMaxACtion().action.y]));
+            Qmatrix[Convert.ToInt32(position.x + getMaxACtion().action.x), Convert.ToInt32(position.y + getMaxACtion().action.y)] = Qvalues;
+            position += getMaxACtion().action;
+            Debug.Log(Qmatrix[Convert.ToInt32(position.x), Convert.ToInt32(position.y)]);
+            DebugMatrix(Qmatrix, "Qmatrix");
+            DebugMatrix(Rmatrix, "Rmatrix");
+        }
+        else
+        {
+            GetRandomAction();
+            Vector2 ghj = new Vector2(); 
+        }
+        actions.Clear();
+        
     }
 
 
@@ -128,15 +179,17 @@ public class Agent : MonoBehaviour
     void TestMove()
     {
         GetLegalMoves(position);
-        GetRandomAction();
+        //GetRandomAction();
+        QLearning();
     }
 
-    void DebugMatrix(int[,] matirx)
+    void DebugMatrix(int[,] matirx , string name)
     {
         string temp;
-        for (int i = 0; i < world.height; i++)
+        matrixDebug += name + '\n';
+        for (int i = 0; i < world.width; i++)
         {
-            for (int j = 0; j < world.width; j++)
+            for (int j = 0; j < world.height; j++)
             {
                 temp = matirx[i, j].ToString();
                 matrixDebug += temp;
@@ -148,7 +201,20 @@ public class Agent : MonoBehaviour
 
     void OnGUI()
     {
-        GUI.TextField(new Rect(10, 10, 200, 200), matrixDebug, 100);
+       GUI.Label(new Rect(10, 10, 200, 500), matrixDebug);
+    }
+}
+
+[System.Serializable]
+public class R
+{
+    public Vector2 action;
+    public int reward;
+
+    public R(Vector2 a , int b)
+    {
+        action = a;
+        reward = b;
     }
 }
 
