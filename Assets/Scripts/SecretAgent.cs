@@ -3,7 +3,7 @@ using System.Collections;
 
 public class SecretAgent : MonoBehaviour
 {
-    int[,] Qmatrix = new int[7,5];
+    //int[,] Qmatrix = new int[7,5];
 
 	
 	void Start ()

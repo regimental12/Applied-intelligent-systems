@@ -12,8 +12,8 @@ public class Agent : MonoBehaviour
 
     string matrixDebug;
 
-    int[,] Rmatrix = new int[7,5];
-    int[,] Qmatrix = new int[7,5];
+    float[,] Rmatrix = new float[7,5];
+    float[,] Qmatrix = new float[7,5];
 
     int[,] moves = {
          {0, -1},   // North
@@ -26,7 +26,7 @@ public class Agent : MonoBehaviour
     public List<Vector2> actions = new List<Vector2>();
 
     public List<R> Rewards = new List<R>();
-    public int Qvalues;
+    public float Qvalues;
     public float gamma = 0.8f;
 
     void Start()
@@ -37,8 +37,8 @@ public class Agent : MonoBehaviour
         {
             for (int j = 0; j < world.height; j++)
             {
-                Rmatrix[i, j] = 0;
-                Qmatrix[i, j] = 0;
+                Rmatrix[i, j] = -0.4f;
+                Qmatrix[i, j] = 0f;
             }
         }
 
@@ -50,13 +50,13 @@ public class Agent : MonoBehaviour
         Rmatrix[6, 4] = 100;
 
         
-        position = new Vector2(0,4);
+        position = new Vector2(0,3);
 
         
 
         GetLegalMoves(position);
 
-        float stepTime = 0.3f;
+        float stepTime = 0.2f;
         float delay = 0.0f;
 
         InvokeRepeating("TestMove", delay , stepTime);
@@ -71,7 +71,7 @@ public class Agent : MonoBehaviour
         {
             for (int j = 0; j < 5; j++)
             {
-                if (Mathf.Ceil(currentPos.x) == i && (Mathf.Ceil(currentPos.y) == j)) ;
+                if (Mathf.Ceil(currentPos.x) == i && (Mathf.Ceil(currentPos.y) == j)) 
                 {
                     // if currentpos[0] + moves[0][0] <= rows-1 and currentpos[0] + moves[0][0] >= 0 and currentpos[1] + moves[0][1] <= columns-1 and currentpos[1] + moves[0][1] >= 0:
                     if(currentPos.x + moves[0, 0] < world.width && currentPos.x + moves[0, 0] >= 0 && currentPos.y + moves[0, 1] < world.height && currentPos.y + moves[0, 1] >= 0)
@@ -126,10 +126,11 @@ public class Agent : MonoBehaviour
         {
             if (a.reward > maxItem.reward)
             {
+                
                 maxItem = a;
             }
         }
-
+        Debug.Log(maxItem.reward.ToString());
         //Debug.Log("Max action: " + temp);
         return maxItem;
     }
@@ -137,32 +138,47 @@ public class Agent : MonoBehaviour
     void QLearning()
     {
         Rewards.Clear();
-        // state = square currently in.
-        // action = moves possible.
+        // get Rmatrix reward and + gamma * max Qmatrix move.
 
-        // need to get max reward action
-        // do action 
-        // calc reward for last state.
-        Debug.Log(position.x + " , " + position.y);
-        Qvalues = (Qmatrix[Convert.ToInt32(position.x), Convert.ToInt32(position.y)]);
+        float cReward = Rmatrix[(int)position.x, (int)position.y];
+
         foreach (var a in actions)
         {
-            Rewards.Add(new R(a, Rmatrix[Convert.ToInt32(position.x + a.x ), Convert.ToInt32(position.y + a.y)]));  
+            Rewards.Add(new R(a, Qmatrix[Convert.ToInt32(position.x + a.x ), Convert.ToInt32(position.y + a.y)]));  
         }
-        if (getMaxACtion().reward > 0)
+
+        R cMaxsction = getMaxACtion();
+
+        Qmatrix[(int)position.x, (int)position.y] = cReward + gamma * cMaxsction.reward;
+        position += cMaxsction.action;
+
+        DebugMatrix(Qmatrix, "Qmatrix");
+        DebugMatrix(Rmatrix, "Rmatrix");
+
+        if (position.x == 6 && position.y == 4)
         {
-            Qvalues = Convert.ToInt32(getMaxACtion().reward + gamma * (Qmatrix[(int)getMaxACtion().action.x, (int)getMaxACtion().action.y]));
-            Qmatrix[Convert.ToInt32(position.x + getMaxACtion().action.x), Convert.ToInt32(position.y + getMaxACtion().action.y)] = Qvalues;
-            position += getMaxACtion().action;
-            Debug.Log(Qmatrix[Convert.ToInt32(position.x), Convert.ToInt32(position.y)]);
-            DebugMatrix(Qmatrix, "Qmatrix");
-            DebugMatrix(Rmatrix, "Rmatrix");
+            position = new Vector2(0,4);
         }
-        else
-        {
-            GetRandomAction();
-            Vector2 ghj = new Vector2(); 
-        }
+
+        #region MyRegion
+        //if (getMaxACtion().reward > -1.5)
+        //{
+
+        // not checking the qmatrix reward matrix for max. 
+        //Debug.Log(getMaxACtion().reward);
+        //Qvalues = (getMaxACtion().reward + gamma * (Qmatrix[(int)position.x + (int)getMaxACtion().action.x, (int)position.y + (int)getMaxACtion().action.y]));
+        //Qmatrix[Convert.ToInt32(position.x /*+ getMaxACtion().action.x*/), Convert.ToInt32(position.y/* + getMaxACtion().action.y*/)] = Qvalues;
+        //position += getMaxACtion().action;
+        //Debug.Log(Qmatrix[Convert.ToInt32(position.x), Convert.ToInt32(position.y)]);
+        //matrixDebug = "";
+        //DebugMatrix(Qmatrix, "Qmatrix");
+        //DebugMatrix(Rmatrix, "Rmatrix");
+        //}
+        //else
+        //{
+        //GetRandomAction();
+        //}
+        #endregion
         actions.Clear();
         
     }
@@ -185,6 +201,7 @@ public class Agent : MonoBehaviour
 
     void DebugMatrix(int[,] matirx , string name)
     {
+        //matrixDebug = "";
         string temp;
         matrixDebug += name + '\n';
         for (int i = 0; i < world.width; i++)
@@ -199,6 +216,23 @@ public class Agent : MonoBehaviour
         }   
     }
 
+    void DebugMatrix(float[,] matirx, string name)
+    {
+        //matrixDebug = "";
+        string temp;
+        matrixDebug += name + '\n';
+        for (int i = 0; i < world.width; i++)
+        {
+            for (int j = 0; j < world.height; j++)
+            {
+                temp = matirx[i, j].ToString();
+                matrixDebug += temp;
+                matrixDebug += ',';
+            }
+            matrixDebug += '\n';
+        }
+    }
+
     void OnGUI()
     {
        GUI.Label(new Rect(10, 10, 200, 500), matrixDebug);
@@ -209,9 +243,9 @@ public class Agent : MonoBehaviour
 public class R
 {
     public Vector2 action;
-    public int reward;
+    public float reward;
 
-    public R(Vector2 a , int b)
+    public R(Vector2 a , float b)
     {
         action = a;
         reward = b;
