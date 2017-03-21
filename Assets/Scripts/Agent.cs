@@ -151,7 +151,7 @@ public class Agent : MonoBehaviour
 
         Qmatrix[(int)position.x, (int)position.y] = cReward + gamma * cMaxsction.reward;
         position += cMaxsction.action;
-
+        matrixDebug = "";
         DebugMatrix(Qmatrix, "Qmatrix");
         DebugMatrix(Rmatrix, "Rmatrix");
 
