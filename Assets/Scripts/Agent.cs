@@ -159,26 +159,6 @@ public class Agent : MonoBehaviour
         {
             position = new Vector2(0,4);
         }
-
-        #region MyRegion
-        //if (getMaxACtion().reward > -1.5)
-        //{
-
-        // not checking the qmatrix reward matrix for max. 
-        //Debug.Log(getMaxACtion().reward);
-        //Qvalues = (getMaxACtion().reward + gamma * (Qmatrix[(int)position.x + (int)getMaxACtion().action.x, (int)position.y + (int)getMaxACtion().action.y]));
-        //Qmatrix[Convert.ToInt32(position.x /*+ getMaxACtion().action.x*/), Convert.ToInt32(position.y/* + getMaxACtion().action.y*/)] = Qvalues;
-        //position += getMaxACtion().action;
-        //Debug.Log(Qmatrix[Convert.ToInt32(position.x), Convert.ToInt32(position.y)]);
-        //matrixDebug = "";
-        //DebugMatrix(Qmatrix, "Qmatrix");
-        //DebugMatrix(Rmatrix, "Rmatrix");
-        //}
-        //else
-        //{
-        //GetRandomAction();
-        //}
-        #endregion
         actions.Clear();
         
     }
